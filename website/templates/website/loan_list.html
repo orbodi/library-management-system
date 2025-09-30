@@ -1,0 +1,101 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Liste des emprunts - Bibliothèque{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1><i class="bi bi-bookmark-check"></i> Liste des emprunts</h1>
+        {% if user.profile.is_librarian %}
+            <a href="{% url 'create_loan' %}" class="btn btn-success">
+                <i class="bi bi-plus-circle"></i> Créer un emprunt
+            </a>
+        {% endif %}
+    </div>
+
+    <!-- Filtres -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="btn-group" role="group">
+                <a href="{% url 'loan_list' %}" class="btn btn-outline-primary {% if not request.GET.status %}active{% endif %}">
+                    Tous
+                </a>
+                <a href="{% url 'loan_list' %}?status=ACTIVE" class="btn btn-outline-success {% if request.GET.status == 'ACTIVE' %}active{% endif %}">
+                    En cours
+                </a>
+                <a href="{% url 'loan_list' %}?status=OVERDUE" class="btn btn-outline-danger {% if request.GET.status == 'OVERDUE' %}active{% endif %}">
+                    En retard
+                </a>
+                <a href="{% url 'loan_list' %}?status=RETURNED" class="btn btn-outline-secondary {% if request.GET.status == 'RETURNED' %}active{% endif %}">
+                    Retournés
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Liste des emprunts -->
+    {% if loans %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Livre</th>
+                        <th>Emprunteur</th>
+                        <th>Date d'emprunt</th>
+                        <th>Date de retour prévue</th>
+                        <th>Statut</th>
+                        {% if user.profile.is_librarian %}
+                            <th>Actions</th>
+                        {% endif %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in loans %}
+                        <tr>
+                            <td>
+                                <strong>{{ loan.book.title }}</strong><br>
+                                <small class="text-muted">{{ loan.book.author }}</small>
+                            </td>
+                            <td>
+                                {{ loan.borrower.get_full_name }}<br>
+                                <small class="text-muted">{{ loan.borrower.profile.get_user_type_display }}</small>
+                            </td>
+                            <td>{{ loan.borrow_date|date:"d/m/Y" }}</td>
+                            <td>
+                                {{ loan.due_date|date:"d/m/Y" }}
+                                {% if loan.is_overdue %}
+                                    <br><span class="badge bg-danger">{{ loan.days_overdue }} jour(s) de retard</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if loan.status == 'ACTIVE' %}
+                                    <span class="badge bg-success">En cours</span>
+                                {% elif loan.status == 'OVERDUE' %}
+                                    <span class="badge bg-danger">En retard</span>
+                                {% elif loan.status == 'RETURNED' %}
+                                    <span class="badge bg-secondary">Retourné le {{ loan.return_date|date:"d/m/Y" }}</span>
+                                {% endif %}
+                            </td>
+                            {% if user.profile.is_librarian %}
+                                <td>
+                                    {% if loan.status != 'RETURNED' %}
+                                        <a href="{% url 'return_book' loan.id %}" class="btn btn-sm btn-primary">
+                                            <i class="bi bi-arrow-return-left"></i> Retourner
+                                        </a>
+                                    {% else %}
+                                        <span class="text-muted">-</span>
+                                    {% endif %}
+                                </td>
+                            {% endif %}
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Aucun emprunt trouvé.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

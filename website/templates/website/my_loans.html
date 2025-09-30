@@ -1,0 +1,96 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Mes emprunts - Bibliothèque{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <h1 class="mb-4"><i class="bi bi-person-check"></i> Mes emprunts</h1>
+
+    <!-- Emprunts actifs -->
+    <h3 class="mt-4 mb-3">
+        <i class="bi bi-bookmark-check"></i> Emprunts en cours
+        {% if active_loans %}
+            <span class="badge bg-primary">{{ active_loans.count }}</span>
+        {% endif %}
+    </h3>
+    
+    {% if active_loans %}
+        <div class="row g-4 mb-5">
+            {% for loan in active_loans %}
+                <div class="col-md-6">
+                    <div class="card {% if loan.is_overdue %}border-danger{% endif %}">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ loan.book.title }}</h5>
+                            <p class="card-text">
+                                <i class="bi bi-person"></i> <strong>Auteur:</strong> {{ loan.book.author }}<br>
+                                <i class="bi bi-calendar"></i> <strong>Emprunté le:</strong> {{ loan.borrow_date|date:"d/m/Y" }}<br>
+                                <i class="bi bi-calendar-check"></i> <strong>À retourner le:</strong> {{ loan.due_date|date:"d/m/Y" }}<br>
+                            </p>
+                            
+                            {% if loan.is_overdue %}
+                                <div class="alert alert-danger">
+                                    <i class="bi bi-exclamation-triangle"></i> 
+                                    <strong>Retard:</strong> {{ loan.days_overdue }} jour(s) de retard
+                                </div>
+                            {% else %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle"></i> En cours
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Vous n'avez aucun emprunt en cours.
+        </div>
+    {% endif %}
+
+    <!-- Historique -->
+    <h3 class="mt-5 mb-3">
+        <i class="bi bi-clock-history"></i> Historique des emprunts
+    </h3>
+    
+    {% if past_loans %}
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Livre</th>
+                        <th>Date d'emprunt</th>
+                        <th>Date de retour prévue</th>
+                        <th>Date de retour effective</th>
+                        <th>Statut</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for loan in past_loans %}
+                        <tr>
+                            <td>
+                                <strong>{{ loan.book.title }}</strong><br>
+                                <small class="text-muted">{{ loan.book.author }}</small>
+                            </td>
+                            <td>{{ loan.borrow_date|date:"d/m/Y" }}</td>
+                            <td>{{ loan.due_date|date:"d/m/Y" }}</td>
+                            <td>{{ loan.return_date|date:"d/m/Y" }}</td>
+                            <td>
+                                {% if loan.return_date > loan.due_date %}
+                                    <span class="badge bg-warning">Retourné en retard</span>
+                                {% else %}
+                                    <span class="badge bg-success">Retourné à temps</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            <i class="bi bi-info-circle"></i> Vous n'avez pas d'historique d'emprunt.
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Retourner un livre - Bibliothèque{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card shadow border-success">
+                <div class="card-body p-4">
+                    <h2 class="text-success mb-4">
+                        <i class="bi bi-arrow-return-left"></i> Confirmer le retour
+                    </h2>
+                    
+                    <p class="lead">Confirmez-vous le retour de ce livre ?</p>
+                    
+                    <div class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ loan.book.title }}</h5>
+                            <p class="card-text">
+                                <strong>Emprunteur:</strong> {{ loan.borrower.get_full_name }}<br>
+                                <strong>Date d'emprunt:</strong> {{ loan.borrow_date|date:"d/m/Y" }}<br>
+                                <strong>Date de retour prévue:</strong> {{ loan.due_date|date:"d/m/Y" }}<br>
+                                {% if loan.is_overdue %}
+                                    <span class="badge bg-danger">{{ loan.days_overdue }} jour(s) de retard</span>
+                                {% else %}
+                                    <span class="badge bg-success">À temps</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle"></i> Confirmer le retour
+                            </button>
+                            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

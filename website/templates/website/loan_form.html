@@ -1,0 +1,73 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Créer un emprunt - Bibliothèque{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <h2 class="mb-4">
+                        <i class="bi bi-bookmark-plus"></i> Créer un emprunt
+                    </h2>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Livre *</label>
+                            {{ form.book }}
+                            {% if form.book.errors %}
+                                <div class="text-danger"><small>{{ form.book.errors }}</small></div>
+                            {% endif %}
+                            <small class="form-text text-muted">Seuls les livres disponibles sont affichés</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Emprunteur *</label>
+                            {{ form.borrower }}
+                            {% if form.borrower.errors %}
+                                <div class="text-danger"><small>{{ form.borrower.errors }}</small></div>
+                            {% endif %}
+                            <small class="form-text text-muted">Étudiants, professeurs et personnel uniquement</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Date de retour prévue *</label>
+                            {{ form.due_date }}
+                            {% if form.due_date.errors %}
+                                <div class="text-danger"><small>{{ form.due_date.errors }}</small></div>
+                            {% endif %}
+                            <small class="form-text text-muted">Par défaut: 14 jours après l'emprunt</small>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Notes</label>
+                            {{ form.notes }}
+                            {% if form.notes.errors %}
+                                <div class="text-danger"><small>{{ form.notes.errors }}</small></div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle"></i> Créer l'emprunt
+                            </button>
+                            <a href="{% url 'loan_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

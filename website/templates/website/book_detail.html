@@ -1,0 +1,123 @@
+{% extends 'website/base.html' %}
+
+{% block title %}{{ book.title }} - Bibliothèque{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'home' %}">Accueil</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'book_list' %}">Livres</a></li>
+            <li class="breadcrumb-item active">{{ book.title }}</li>
+        </ol>
+    </nav>
+
+    <div class="row">
+        <div class="col-md-4">
+            {% if book.cover_image %}
+                <img src="{{ book.cover_image.url }}" class="book-cover-detail shadow" alt="{{ book.title }}">
+            {% else %}
+                <div class="bg-secondary rounded shadow d-flex align-items-center justify-content-center" style="height: 400px;">
+                    <i class="bi bi-book" style="font-size: 6rem; color: white;"></i>
+                </div>
+            {% endif %}
+            
+            <div class="card mt-3">
+                <div class="card-body">
+                    <h5 class="card-title">Statut</h5>
+                    {% if book.is_available %}
+                        <span class="badge bg-success fs-6">
+                            <i class="bi bi-check-circle"></i> Disponible
+                        </span>
+                        <p class="mt-2 mb-0"><strong>{{ book.available_quantity }}</strong> exemplaire(s) disponible(s) sur <strong>{{ book.quantity }}</strong></p>
+                    {% else %}
+                        <span class="badge bg-danger fs-6">
+                            <i class="bi bi-x-circle"></i> {{ book.get_status_display }}
+                        </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <h1 class="mb-3">{{ book.title }}</h1>
+            
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Informations</h5>
+                    <table class="table table-borderless">
+                        <tr>
+                            <td><strong><i class="bi bi-person"></i> Auteur:</strong></td>
+                            <td>{{ book.author }}</td>
+                        </tr>
+                        <tr>
+                            <td><strong><i class="bi bi-upc"></i> ISBN:</strong></td>
+                            <td>{{ book.isbn }}</td>
+                        </tr>
+                        {% if book.publisher %}
+                        <tr>
+                            <td><strong><i class="bi bi-building"></i> Éditeur:</strong></td>
+                            <td>{{ book.publisher }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if book.publication_year %}
+                        <tr>
+                            <td><strong><i class="bi bi-calendar"></i> Année:</strong></td>
+                            <td>{{ book.publication_year }}</td>
+                        </tr>
+                        {% endif %}
+                        {% if book.category %}
+                        <tr>
+                            <td><strong><i class="bi bi-tag"></i> Catégorie:</strong></td>
+                            <td><span class="badge bg-primary">{{ book.category }}</span></td>
+                        </tr>
+                        {% endif %}
+                        <tr>
+                            <td><strong><i class="bi bi-clock"></i> Ajouté le:</strong></td>
+                            <td>{{ book.created_at|date:"d/m/Y à H:i" }}</td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            {% if book.description %}
+            <div class="card mb-3">
+                <div class="card-body">
+                    <h5 class="card-title">Description</h5>
+                    <p class="card-text">{{ book.description|linebreaks }}</p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Actions -->
+            <div class="card">
+                <div class="card-body">
+                    <h5 class="card-title">Actions</h5>
+                    <div class="d-grid gap-2">
+                        {% if user.is_authenticated and user.profile.is_librarian %}
+                            <a href="{% url 'create_loan' %}" class="btn btn-success">
+                                <i class="bi bi-bookmark-plus"></i> Créer un emprunt
+                            </a>
+                            <div class="btn-group" role="group">
+                                <a href="{% url 'edit_book' book.pk %}" class="btn btn-outline-primary">
+                                    <i class="bi bi-pencil"></i> Modifier
+                                </a>
+                                <a href="{% url 'delete_book' book.pk %}" class="btn btn-outline-danger">
+                                    <i class="bi bi-trash"></i> Supprimer
+                                </a>
+                            </div>
+                        {% elif not user.is_authenticated %}
+                            <a href="{% url 'login' %}" class="btn btn-primary">
+                                <i class="bi bi-box-arrow-in-right"></i> Connectez-vous pour emprunter
+                            </a>
+                        {% endif %}
+                        <a href="{% url 'book_list' %}" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> Retour à la liste
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends 'website/base.html' %}
+
+{% block title %}{{ action }} un livre - Bibliothèque{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-body p-4">
+                    <h2 class="mb-4">
+                        <i class="bi bi-book"></i> {{ action}} un livre
+                    </h2>
+                    
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="row">
+                            <div class="col-md-12 mb-3">
+                                <label class="form-label">Titre *</label>
+                                {{ form.title }}
+                                {% if form.title.errors %}
+                                    <div class="text-danger"><small>{{ form.title.errors }}</small></div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Auteur *</label>
+                                {{ form.author }}
+                                {% if form.author.errors %}
+                                    <div class="text-danger"><small>{{ form.author.errors }}</small></div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">ISBN *</label>
+                                {{ form.isbn }}
+                                {% if form.isbn.errors %}
+                                    <div class="text-danger"><small>{{ form.isbn.errors }}</small></div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Éditeur</label>
+                                {{ form.publisher }}
+                                {% if form.publisher.errors %}
+                                    <div class="text-danger"><small>{{ form.publisher.errors }}</small></div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Année de publication</label>
+                                {{ form.publication_year }}
+                                {% if form.publication_year.errors %}
+                                    <div class="text-danger"><small>{{ form.publication_year.errors }}</small></div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label">Catégorie</label>
+                                {{ form.category }}
+                                {% if form.category.errors %}
+                                    <div class="text-danger"><small>{{ form.category.errors }}</small></div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Quantité *</label>
+                                {{ form.quantity }}
+                                {% if form.quantity.errors %}
+                                    <div class="text-danger"><small>{{ form.quantity.errors }}</small></div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="col-md-3 mb-3">
+                                <label class="form-label">Statut *</label>
+                                {{ form.status }}
+                                {% if form.status.errors %}
+                                    <div class="text-danger"><small>{{ form.status.errors }}</small></div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Description</label>
+                            {{ form.description }}
+                            {% if form.description.errors %}
+                                <div class="text-danger"><small>{{ form.description.errors }}</small></div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label">Image de couverture</label>
+                            {{ form.cover_image }}
+                            {% if form.cover_image.errors %}
+                                <div class="text-danger"><small>{{ form.cover_image.errors }}</small></div>
+                            {% endif %}
+                            {% if book and book.cover_image %}
+                                <div class="mt-2">
+                                    <img src="{{ book.cover_image.url }}" alt="{{ book.title }}" style="max-width: 200px;" class="img-thumbnail">
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="bi bi-save"></i> Enregistrer
+                            </button>
+                            <a href="{% url 'book_list' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle"></i> Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

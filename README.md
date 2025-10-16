@@ -242,3 +242,5 @@ Pour toute question ou problème :
 - Consultez la [documentation Django](https://docs.djangoproject.com/)
 - Consultez [DOCKER.md](DOCKER.md) pour les questions Docker
 - Consultez [README-ENV.md](README-ENV.md) pour la configuration
+
+

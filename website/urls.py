@@ -27,3 +27,4 @@ urlpatterns = [
     # Tableau de bord (bibliothécaires)
     path('dashboard/', views.dashboard, name='dashboard'),
 ]
+

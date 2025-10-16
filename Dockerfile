@@ -44,3 +44,5 @@ RUN chmod +x /app/entrypoint.sh
 
 # Définir le script d'entrée comme commande par défaut
 CMD ["/app/entrypoint.sh"]
+
+

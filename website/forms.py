@@ -127,3 +127,5 @@ class BookSearchForm(forms.Form):
         choices=[('', 'Tous')] + Book.STATUS_CHOICES,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+
+

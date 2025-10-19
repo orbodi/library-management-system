@@ -29,6 +29,12 @@ class UserProfile(models.Model):
     def __str__(self):
         return f"{self.user.get_full_name() or self.user.username} - {self.get_user_type_display()}"
     
+    def save(self, *args, **kwargs):
+        """Convertir les matricules vides en None pour éviter les conflits d'unicité"""
+        if self.matricule == '':
+            self.matricule = None
+        super().save(*args, **kwargs)
+    
     def can_borrow(self):
         """Vérifie si l'utilisateur peut emprunter des livres"""
         return self.user_type in ['STUDENT', 'TEACHER', 'STAFF']
@@ -90,6 +96,10 @@ class Book(models.Model):
         if self.available_quantity > 0:
             self.status = 'AVAILABLE'
         self.save()
+    
+    def borrowed_count(self):
+        """Retourne le nombre d'exemplaires actuellement empruntés"""
+        return self.quantity - self.available_quantity
 
 
 class Loan(models.Model):

@@ -1,0 +1,81 @@
+{% extends 'website/base.html' %}
+
+{% block title %}Confirmer l'emprunt - {{ book.title }}{% endblock %}
+
+{% block content %}
+<div class="container my-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card shadow">
+                <div class="card-header bg-primary text-white">
+                    <h4 class="mb-0">
+                        <i class="bi bi-bookmark-plus"></i> Confirmer l'emprunt
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 text-center">
+                            {% if book.cover_image %}
+                                <img src="{{ book.cover_image.url }}" class="img-fluid rounded shadow-sm" alt="{{ book.title }}">
+                            {% else %}
+                                <div class="bg-secondary rounded d-flex align-items-center justify-content-center" style="height: 200px;">
+                                    <i class="bi bi-book" style="font-size: 4rem; color: white;"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div class="col-md-8">
+                            <h3>{{ book.title }}</h3>
+                            <p class="text-muted mb-3">
+                                <i class="bi bi-person"></i> {{ book.author }}
+                            </p>
+                            
+                            <div class="alert alert-info">
+                                <h5><i class="bi bi-info-circle"></i> Conditions d'emprunt</h5>
+                                <ul class="mb-0">
+                                    <li><strong>Durée :</strong> 14 jours</li>
+                                    <li><strong>Date de retour prévue :</strong> {{ due_date|default:"Dans 14 jours" }}</li>
+                                    <li>Vous devez retourner le livre avant la date d'échéance</li>
+                                    <li>En cas de retard, des pénalités peuvent s'appliquer</li>
+                                </ul>
+                            </div>
+                            
+                            <div class="card mb-3">
+                                <div class="card-body">
+                                    <h6 class="card-title">Informations du livre</h6>
+                                    <p class="mb-1"><strong>ISBN :</strong> {{ book.isbn }}</p>
+                                    {% if book.category %}
+                                    <p class="mb-1"><strong>Catégorie :</strong> {{ book.category }}</p>
+                                    {% endif %}
+                                    <p class="mb-0">
+                                        <strong>Statut :</strong> 
+                                        <span class="badge bg-success">Disponible ({{ book.available_quantity }} exemplaire(s))</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <p class="text-center mb-4">
+                        <strong>Êtes-vous sûr de vouloir emprunter ce livre ?</strong>
+                    </p>
+                    
+                    <form method="post">
+                        {% csrf_token %}
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="bi bi-check-circle"></i> Confirmer l'emprunt
+                            </button>
+                            <a href="{% url 'book_detail' book.pk %}" class="btn btn-secondary btn-lg">
+                                <i class="bi bi-x-circle"></i> Annuler
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+

@@ -8,14 +8,47 @@
         <i class="bi bi-speedometer2"></i> Tableau de bord bibliothécaire
     </h1>
 
-    <!-- Statistiques -->
+    <!-- Actions rapides -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <h5 class="card-title mb-3">
+                <i class="bi bi-lightning-fill"></i> Actions rapides
+            </h5>
+            <div class="row g-2">
+                <div class="col-md-3">
+                    <a href="{% url 'add_book' %}" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-circle"></i> Ajouter un livre
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'create_loan' %}" class="btn btn-success w-100">
+                        <i class="bi bi-bookmark-plus"></i> Créer un emprunt
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'loan_list' %}" class="btn btn-info w-100">
+                        <i class="bi bi-list-check"></i> Gérer les emprunts
+                    </a>
+                </div>
+                <div class="col-md-3">
+                    <a href="{% url 'book_list' %}" class="btn btn-secondary w-100">
+                        <i class="bi bi-book"></i> Catalogue complet
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques des livres -->
+    <h4 class="mb-3"><i class="bi bi-book"></i> Statistiques des livres</h4>
     <div class="row g-4 mb-5">
         <div class="col-md-3">
             <div class="card text-white" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
                 <div class="card-body text-center">
                     <i class="bi bi-book-fill" style="font-size: 2.5rem;"></i>
                     <h2 class="mt-3">{{ total_books }}</h2>
-                    <p class="mb-0">Total livres</p>
+                    <p class="mb-1">Titres de livres</p>
+                    <small>{{ total_copies }} exemplaires au total</small>
                 </div>
             </div>
         </div>
@@ -25,7 +58,8 @@
                 <div class="card-body text-center">
                     <i class="bi bi-check-circle-fill" style="font-size: 2.5rem;"></i>
                     <h2 class="mt-3">{{ available_books }}</h2>
-                    <p class="mb-0">Disponibles</p>
+                    <p class="mb-1">Titres disponibles</p>
+                    <small>{{ total_copies_available }} exemplaires disponibles</small>
                 </div>
             </div>
         </div>
@@ -34,6 +68,32 @@
             <div class="card text-white" style="background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);">
                 <div class="card-body text-center">
                     <i class="bi bi-bookmark-fill" style="font-size: 2.5rem;"></i>
+                    <h2 class="mt-3">{{ borrowed_books }}</h2>
+                    <p class="mb-1">Titres empruntés</p>
+                    <small>Tous les exemplaires empruntés</small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);">
+                <div class="card-body text-center">
+                    <i class="bi bi-tools" style="font-size: 2.5rem;"></i>
+                    <h2 class="mt-3">{{ maintenance_books }}</h2>
+                    <p class="mb-1">En maintenance</p>
+                    <small>Livres en réparation</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques des emprunts -->
+    <h4 class="mb-3"><i class="bi bi-bookmark"></i> Statistiques des emprunts</h4>
+    <div class="row g-4 mb-5">
+        <div class="col-md-3">
+            <div class="card text-white bg-success">
+                <div class="card-body text-center">
+                    <i class="bi bi-check-circle-fill" style="font-size: 2.5rem;"></i>
                     <h2 class="mt-3">{{ active_loans }}</h2>
                     <p class="mb-0">Emprunts actifs</p>
                 </div>
@@ -46,6 +106,60 @@
                     <i class="bi bi-exclamation-triangle-fill" style="font-size: 2.5rem;"></i>
                     <h2 class="mt-3">{{ overdue_loans }}</h2>
                     <p class="mb-0">En retard</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white bg-info">
+                <div class="card-body text-center">
+                    <i class="bi bi-arrow-return-left" style="font-size: 2.5rem;"></i>
+                    <h2 class="mt-3">{{ returned_loans }}</h2>
+                    <p class="mb-0">Retournés</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card text-white bg-secondary">
+                <div class="card-body text-center">
+                    <i class="bi bi-clipboard-data" style="font-size: 2.5rem;"></i>
+                    <h2 class="mt-3">{{ total_loans }}</h2>
+                    <p class="mb-0">Total emprunts</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Statistiques des utilisateurs -->
+    <h4 class="mb-3"><i class="bi bi-people"></i> Statistiques des utilisateurs</h4>
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card text-white" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);">
+                <div class="card-body text-center">
+                    <i class="bi bi-people-fill" style="font-size: 2.5rem;"></i>
+                    <h2 class="mt-3">{{ total_users }}</h2>
+                    <p class="mb-0">Utilisateurs totaux</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card text-white" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);">
+                <div class="card-body text-center">
+                    <i class="bi bi-person-check-fill" style="font-size: 2.5rem;"></i>
+                    <h2 class="mt-3">{{ total_borrowers }}</h2>
+                    <p class="mb-0">Emprunteurs</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card text-white" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);">
+                <div class="card-body text-center">
+                    <i class="bi bi-person-badge-fill" style="font-size: 2.5rem;"></i>
+                    <h2 class="mt-3">{{ total_librarians }}</h2>
+                    <p class="mb-0">Bibliothécaires</p>
                 </div>
             </div>
         </div>
@@ -98,6 +212,59 @@
                 </div>
             </div>
         </div>
+    {% endif %}
+
+    <!-- Livres populaires -->
+    {% if popular_books %}
+    <div class="card mb-4">
+        <div class="card-header">
+            <h4 class="mb-0">
+                <i class="bi bi-trophy"></i> Top 5 des livres les plus empruntés
+            </h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="5%">#</th>
+                            <th width="45%">Livre</th>
+                            <th width="25%">Auteur</th>
+                            <th width="15%">Nombre d'emprunts</th>
+                            <th width="10%">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for book in popular_books %}
+                            <tr>
+                                <td>
+                                    {% if forloop.counter == 1 %}
+                                        <span class="badge bg-warning text-dark">🥇</span>
+                                    {% elif forloop.counter == 2 %}
+                                        <span class="badge bg-secondary">🥈</span>
+                                    {% elif forloop.counter == 3 %}
+                                        <span class="badge" style="background-color: #cd7f32;">🥉</span>
+                                    {% else %}
+                                        {{ forloop.counter }}
+                                    {% endif %}
+                                </td>
+                                <td><strong>{{ book.title }}</strong></td>
+                                <td>{{ book.author }}</td>
+                                <td>
+                                    <span class="badge bg-primary">{{ book.loan_count }} emprunt(s)</span>
+                                </td>
+                                <td>
+                                    <a href="{% url 'book_detail' book.pk %}" class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
     {% endif %}
 
     <!-- Emprunts récents -->
@@ -162,5 +329,6 @@
     </div>
 </div>
 {% endblock %}
+
 
 

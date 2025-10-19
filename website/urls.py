@@ -10,7 +10,7 @@ urlpatterns = [
     
     # Authentification
     path('register/', views.register, name='register'),
-    path('login/', auth_views.LoginView.as_view(template_name='website/login.html'), name='login'),
+    path('login/', views.custom_login, name='login'),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     
     # Gestion des livres (bibliothécaires)
@@ -23,6 +23,7 @@ urlpatterns = [
     path('loans/create/', views.create_loan, name='create_loan'),
     path('loans/<int:loan_id>/return/', views.return_book, name='return_book'),
     path('my-loans/', views.my_loans, name='my_loans'),
+    path('books/<int:pk>/borrow/', views.borrow_book, name='borrow_book'),
     
     # Tableau de bord (bibliothécaires)
     path('dashboard/', views.dashboard, name='dashboard'),

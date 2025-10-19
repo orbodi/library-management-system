@@ -1,11 +1,12 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth import login, logout
+from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
 from django.db.models import Q
 from django.utils import timezone
 from .models import Book, Loan, UserProfile
 from .forms import BookForm, LoanForm, BookSearchForm, UserRegistrationForm
+from django.contrib.auth.forms import AuthenticationForm
 
 
 # Fonctions de vérification des permissions
@@ -75,6 +76,52 @@ def book_detail(request, pk):
 
 
 # Vues d'authentification
+def custom_login(request):
+    """Connexion avec redirection intelligente selon le type d'utilisateur"""
+    if request.method == 'POST':
+        form = AuthenticationForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(username=username, password=password)
+            
+            if user is not None:
+                login(request, user)
+                messages.success(request, f'Bienvenue {user.get_full_name() or user.username} !')
+                
+                # Vérifier s'il y a une page "next" demandée
+                next_page = request.GET.get('next') or request.POST.get('next')
+                
+                if next_page:
+                    # Si une page est demandée, vérifier les permissions
+                    if 'dashboard' in next_page or 'add_book' in next_page or 'create_loan' in next_page:
+                        # Pages réservées aux bibliothécaires
+                        if hasattr(user, 'profile') and (user.profile.is_librarian() or user.is_staff or user.is_superuser):
+                            return redirect(next_page)
+                        else:
+                            messages.warning(request, 'Vous n\'avez pas accès à cette page.')
+                            return redirect('home')
+                    else:
+                        # Autres pages accessibles
+                        return redirect(next_page)
+                
+                # Redirection intelligente par défaut selon le type d'utilisateur
+                if hasattr(user, 'profile'):
+                    if user.profile.is_librarian() or user.is_staff or user.is_superuser:
+                        # Bibliothécaires et admins → Dashboard
+                        return redirect('dashboard')
+                    else:
+                        # Autres utilisateurs → Page d'accueil
+                        return redirect('home')
+                else:
+                    # Utilisateur sans profil → Page d'accueil
+                    return redirect('home')
+    else:
+        form = AuthenticationForm()
+    
+    return render(request, 'website/login.html', {'form': form})
+
+
 def register(request):
     """Inscription d'un nouvel utilisateur"""
     if request.method == 'POST':
@@ -234,26 +281,111 @@ def my_loans(request):
 
 
 @login_required
+@user_passes_test(can_borrow)
+def borrow_book(request, pk):
+    """Emprunter un livre (pour étudiants, professeurs, personnel)"""
+    book = get_object_or_404(Book, pk=pk)
+    
+    # Vérifier que le livre est disponible
+    if not book.is_available():
+        messages.error(request, 'Ce livre n\'est pas disponible actuellement.')
+        return redirect('book_detail', pk=pk)
+    
+    # Vérifier que l'utilisateur n'a pas déjà emprunté ce livre
+    existing_loan = Loan.objects.filter(
+        book=book,
+        borrower=request.user,
+        status__in=['ACTIVE', 'OVERDUE']
+    ).exists()
+    
+    if existing_loan:
+        messages.warning(request, 'Vous avez déjà emprunté ce livre.')
+        return redirect('my_loans')
+    
+    if request.method == 'POST':
+        from datetime import timedelta
+        
+        # Créer l'emprunt
+        loan = Loan.objects.create(
+            book=book,
+            borrower=request.user,
+            borrow_date=timezone.now(),
+            due_date=timezone.now() + timedelta(days=14),
+            status='ACTIVE'
+        )
+        
+        # Mettre à jour la disponibilité du livre
+        book.borrow_book()
+        
+        messages.success(
+            request,
+            f'Vous avez emprunté "{book.title}". Date de retour prévue : {loan.due_date.strftime("%d/%m/%Y")}'
+        )
+        return redirect('my_loans')
+    
+    return render(request, 'website/borrow_confirm.html', {'book': book})
+
+
+@login_required
 @user_passes_test(is_librarian)
 def dashboard(request):
     """Tableau de bord pour les bibliothécaires"""
+    from django.contrib.auth.models import User
+    
+    # Statistiques des livres
     total_books = Book.objects.count()
     available_books = Book.objects.filter(status='AVAILABLE').count()
     borrowed_books = Book.objects.filter(status='BORROWED').count()
+    maintenance_books = Book.objects.filter(status='MAINTENANCE').count()
     
+    # Calcul du nombre total d'exemplaires disponibles
+    total_copies_available = sum(book.available_quantity for book in Book.objects.all())
+    total_copies = sum(book.quantity for book in Book.objects.all())
+    
+    # Statistiques des emprunts
     active_loans = Loan.objects.filter(status='ACTIVE').count()
     overdue_loans = Loan.objects.filter(status='OVERDUE').count()
+    returned_loans = Loan.objects.filter(status='RETURNED').count()
+    total_loans = Loan.objects.count()
     
-    recent_loans = Loan.objects.filter(status__in=['ACTIVE', 'OVERDUE'])[:10]
-    overdue_list = Loan.objects.filter(status='OVERDUE')
+    # Statistiques des utilisateurs
+    total_users = User.objects.count()
+    total_borrowers = UserProfile.objects.filter(user_type__in=['STUDENT', 'TEACHER', 'STAFF']).count()
+    total_librarians = UserProfile.objects.filter(user_type='LIBRARIAN').count()
+    
+    # Emprunts récents et en retard
+    recent_loans = Loan.objects.filter(status__in=['ACTIVE', 'OVERDUE']).select_related('book', 'borrower', 'borrower__profile')[:10]
+    overdue_list = Loan.objects.filter(status='OVERDUE').select_related('book', 'borrower', 'borrower__profile')
+    
+    # Livres les plus empruntés (top 5)
+    from django.db.models import Count
+    popular_books = Book.objects.annotate(
+        loan_count=Count('loans')
+    ).filter(loan_count__gt=0).order_by('-loan_count')[:5]
     
     context = {
+        # Livres
         'total_books': total_books,
         'available_books': available_books,
         'borrowed_books': borrowed_books,
+        'maintenance_books': maintenance_books,
+        'total_copies': total_copies,
+        'total_copies_available': total_copies_available,
+        
+        # Emprunts
         'active_loans': active_loans,
         'overdue_loans': overdue_loans,
+        'returned_loans': returned_loans,
+        'total_loans': total_loans,
+        
+        # Utilisateurs
+        'total_users': total_users,
+        'total_borrowers': total_borrowers,
+        'total_librarians': total_librarians,
+        
+        # Listes
         'recent_loans': recent_loans,
         'overdue_list': overdue_list,
+        'popular_books': popular_books,
     }
     return render(request, 'website/dashboard.html', context)

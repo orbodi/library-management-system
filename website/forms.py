@@ -8,21 +8,59 @@ from django.utils import timezone
 
 class UserRegistrationForm(UserCreationForm):
     """Formulaire d'inscription avec profil utilisateur"""
+    
+    # Choix limités pour l'inscription publique (pas de bibliothécaire)
+    PUBLIC_USER_TYPE_CHOICES = [
+        ('STUDENT', 'Étudiant'),
+        ('TEACHER', 'Professeur'),
+        ('STAFF', 'Personnel'),
+    ]
+    
     email = forms.EmailField(required=True, label="Email")
     first_name = forms.CharField(required=True, label="Prénom")
     last_name = forms.CharField(required=True, label="Nom")
     user_type = forms.ChoiceField(
-        choices=UserProfile.USER_TYPE_CHOICES,
+        choices=PUBLIC_USER_TYPE_CHOICES,
         required=True,
-        label="Type d'utilisateur"
+        label="Type d'utilisateur",
+        help_text="Les comptes bibliothécaires sont créés uniquement par les administrateurs"
     )
-    matricule = forms.CharField(required=False, label="Matricule")
-    phone = forms.CharField(required=False, label="Téléphone")
-    address = forms.CharField(required=False, widget=forms.Textarea(attrs={'rows': 3}), label="Adresse")
+    matricule = forms.CharField(
+        required=False, 
+        label="Matricule (optionnel)",
+        help_text="Numéro d'identification (étudiant, enseignant, etc.)"
+    )
+    phone = forms.CharField(
+        required=False, 
+        label="Téléphone (optionnel)"
+    )
+    address = forms.CharField(
+        required=False, 
+        widget=forms.Textarea(attrs={'rows': 3}), 
+        label="Adresse (optionnel)"
+    )
     
     class Meta:
         model = User
         fields = ['username', 'email', 'first_name', 'last_name', 'password1', 'password2']
+    
+    def clean_user_type(self):
+        """Validation : Empêcher la création de bibliothécaires via l'inscription publique"""
+        user_type = self.cleaned_data.get('user_type')
+        
+        # Vérifier que le type n'est pas LIBRARIAN
+        if user_type == 'LIBRARIAN':
+            raise forms.ValidationError(
+                "Les comptes bibliothécaires ne peuvent pas être créés via ce formulaire. "
+                "Veuillez contacter un administrateur."
+            )
+        
+        # Vérifier que le type est dans les choix autorisés
+        allowed_types = [choice[0] for choice in self.PUBLIC_USER_TYPE_CHOICES]
+        if user_type not in allowed_types:
+            raise forms.ValidationError("Type d'utilisateur non autorisé.")
+        
+        return user_type
     
     def save(self, commit=True):
         user = super().save(commit=False)
@@ -33,12 +71,25 @@ class UserRegistrationForm(UserCreationForm):
         if commit:
             user.save()
             # Créer le profil utilisateur
+            # Convertir les chaînes vides en None pour éviter les conflits d'unicité
+            matricule = self.cleaned_data.get('matricule')
+            if matricule == '':
+                matricule = None
+            
+            phone = self.cleaned_data.get('phone')
+            if phone == '':
+                phone = None
+            
+            address = self.cleaned_data.get('address')
+            if address == '':
+                address = None
+            
             UserProfile.objects.create(
                 user=user,
                 user_type=self.cleaned_data['user_type'],
-                matricule=self.cleaned_data.get('matricule'),
-                phone=self.cleaned_data.get('phone'),
-                address=self.cleaned_data.get('address')
+                matricule=matricule,
+                phone=phone,
+                address=address
             )
         return user
 
@@ -63,12 +114,55 @@ class BookForm(forms.ModelForm):
             'quantity': forms.NumberInput(attrs={'class': 'form-control', 'min': '1'}),
             'status': forms.Select(attrs={'class': 'form-control'}),
         }
+        labels = {
+            'quantity': 'Quantité totale (nombre d\'exemplaires)',
+        }
+        help_texts = {
+            'quantity': 'Nombre total d\'exemplaires de ce livre dans la bibliothèque',
+        }
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # Si c'est un nouveau livre, définir available_quantity = quantity
         if not self.instance.pk:
             self.instance.available_quantity = self.instance.quantity
+    
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        
+        # Si c'est un nouveau livre
+        if not instance.pk:
+            instance.available_quantity = instance.quantity
+        else:
+            # Si on modifie un livre existant et qu'on augmente la quantité totale
+            old_instance = Book.objects.get(pk=instance.pk)
+            quantity_diff = instance.quantity - old_instance.quantity
+            
+            if quantity_diff > 0:
+                # On a ajouté des exemplaires, augmenter available_quantity
+                instance.available_quantity = old_instance.available_quantity + quantity_diff
+            elif quantity_diff < 0:
+                # On a réduit la quantité totale
+                borrowed_count = old_instance.quantity - old_instance.available_quantity
+                
+                # S'assurer qu'on ne descend pas en dessous du nombre emprunté
+                if instance.quantity < borrowed_count:
+                    raise forms.ValidationError(
+                        f"Impossible de réduire la quantité à {instance.quantity}. "
+                        f"{borrowed_count} exemplaire(s) sont actuellement empruntés."
+                    )
+                
+                instance.available_quantity = instance.quantity - borrowed_count
+        
+        # Mettre à jour le statut en fonction de available_quantity
+        if instance.available_quantity > 0:
+            instance.status = 'AVAILABLE'
+        elif instance.available_quantity == 0:
+            instance.status = 'BORROWED'
+        
+        if commit:
+            instance.save()
+        return instance
 
 
 class LoanForm(forms.ModelForm):
@@ -127,5 +221,6 @@ class BookSearchForm(forms.Form):
         choices=[('', 'Tous')] + Book.STATUS_CHOICES,
         widget=forms.Select(attrs={'class': 'form-control'})
     )
+
 
 

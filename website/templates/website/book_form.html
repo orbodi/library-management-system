@@ -77,8 +77,11 @@
                             </div>
                             
                             <div class="col-md-3 mb-3">
-                                <label class="form-label">Quantité *</label>
+                                <label class="form-label">{{ form.quantity.label }} *</label>
                                 {{ form.quantity }}
+                                {% if form.quantity.help_text %}
+                                    <small class="form-text text-muted d-block">{{ form.quantity.help_text }}</small>
+                                {% endif %}
                                 {% if form.quantity.errors %}
                                     <div class="text-danger"><small>{{ form.quantity.errors }}</small></div>
                                 {% endif %}
@@ -92,6 +95,36 @@
                                 {% endif %}
                             </div>
                         </div>
+                        
+                        {% if book %}
+                        <!-- Informations sur les quantités pour un livre existant -->
+                        <div class="alert alert-info mb-3">
+                            <h6 class="alert-heading">
+                                <i class="bi bi-info-circle"></i> Gestion des quantités
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-4">
+                                    <strong>Quantité totale actuelle :</strong><br>
+                                    <span class="badge bg-primary fs-6">{{ book.quantity }} exemplaire(s)</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Disponibles :</strong><br>
+                                    <span class="badge bg-success fs-6">{{ book.available_quantity }} exemplaire(s)</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <strong>Empruntés :</strong><br>
+                                    <span class="badge bg-warning text-dark fs-6">{{ book.borrowed_count }} exemplaire(s)</span>
+                                </div>
+                            </div>
+                            <hr>
+                            <small>
+                                <i class="bi bi-lightbulb"></i> <strong>Note :</strong><br>
+                                • Si vous <strong>augmentez</strong> la quantité totale, les nouveaux exemplaires seront automatiquement disponibles.<br>
+                                • Si vous <strong>réduisez</strong> la quantité, elle ne peut pas être inférieure au nombre d'exemplaires actuellement empruntés.<br>
+                                • Le statut sera mis à jour automatiquement en fonction des quantités disponibles.
+                            </small>
+                        </div>
+                        {% endif %}
                         
                         <div class="mb-3">
                             <label class="form-label">Description</label>
@@ -129,5 +162,6 @@
     </div>
 </div>
 {% endblock %}
+
 
 

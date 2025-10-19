@@ -212,6 +212,102 @@ class Book(models.Model):
 | `OneToOneField` | Relation 1-1 | User -> Profil |
 | `ManyToManyField` | Relation N-N | Livre <-> Tags |
 
+#### Gestion des Quantités dans le Système
+
+Le système gère intelligemment les quantités de livres avec deux champs :
+
+```python
+class Book(models.Model):
+    quantity = models.IntegerField(default=1, verbose_name="Quantité totale")
+    available_quantity = models.IntegerField(default=1, verbose_name="Quantité disponible")
+    
+    def borrowed_count(self):
+        """Retourne le nombre d'exemplaires actuellement empruntés"""
+        return self.quantity - self.available_quantity
+    
+    def borrow_book(self):
+        """Décrémente la quantité disponible lors d'un emprunt"""
+        if self.is_available():
+            self.available_quantity -= 1
+            if self.available_quantity == 0:
+                self.status = 'BORROWED'
+            self.save()
+            return True
+        return False
+    
+    def return_book(self):
+        """Incrémente la quantité disponible lors d'un retour"""
+        self.available_quantity += 1
+        if self.available_quantity > 0:
+            self.status = 'AVAILABLE'
+        self.save()
+```
+
+**Logique de gestion automatique :**
+
+1. **Ajout d'un nouveau livre** :
+   - `quantity` = nombre d'exemplaires (ex: 5)
+   - `available_quantity` = `quantity` (ex: 5)
+   - Tous les exemplaires sont disponibles
+
+2. **Emprunt d'un livre** :
+   - `available_quantity` -= 1
+   - Si `available_quantity` == 0 → `status` = 'BORROWED'
+   - Exemple : 5 exemplaires → emprunt → 4 disponibles
+
+3. **Retour d'un livre** :
+   - `available_quantity` += 1
+   - Si `available_quantity` > 0 → `status` = 'AVAILABLE'
+   - Exemple : 4 disponibles → retour → 5 disponibles
+
+4. **Modification de la quantité totale** :
+   - **Augmentation** : nouveaux exemplaires ajoutés à `available_quantity`
+     - Avant : quantity=5, available=3 (2 empruntés)
+     - Modification : quantity=7
+     - Après : available=5 (2 toujours empruntés)
+   
+   - **Réduction** : vérifie qu'on ne descend pas sous le nombre emprunté
+     - Avant : quantity=5, available=3 (2 empruntés)
+     - Modification : quantity=4 ✅ (OK, 2 empruntés)
+     - Modification : quantity=1 ❌ (ERREUR, 2 déjà empruntés)
+
+**Exemple pratique :**
+
+```python
+# Créer un livre avec 5 exemplaires
+book = Book.objects.create(
+    title="Python Avancé",
+    author="John Doe",
+    isbn="1234567890123",
+    quantity=5,              # 5 exemplaires au total
+    available_quantity=5     # 5 disponibles
+)
+
+# Emprunter un exemplaire
+book.borrow_book()
+# → quantity=5, available_quantity=4 (1 emprunté)
+
+# Emprunter deux autres exemplaires
+book.borrow_book()
+book.borrow_book()
+# → quantity=5, available_quantity=2 (3 empruntés)
+
+# Retourner un exemplaire
+book.return_book()
+# → quantity=5, available_quantity=3 (2 empruntés)
+
+# Ajouter 3 nouveaux exemplaires
+book.quantity = 8
+book.available_quantity = 6  # 3 nouveaux + 3 qui étaient disponibles
+book.save()
+# → quantity=8, available_quantity=6 (2 toujours empruntés)
+
+# Vérifier les quantités
+print(f"Total : {book.quantity}")                    # 8
+print(f"Disponibles : {book.available_quantity}")    # 6
+print(f"Empruntés : {book.borrowed_count()}")        # 2
+```
+
 #### Relations entre Modèles
 
 ```python
@@ -1422,7 +1518,7 @@ python manage.py shell
 
 ## 7. Flux de Données
 
-### Exemple Complet : Afficher la Liste des Livres
+### Exemple 1 : Afficher la Liste des Livres
 
 ```
 1. L'utilisateur visite : http://localhost:8000/books/
@@ -1447,7 +1543,7 @@ python manage.py shell
 6. Django renvoie le HTML généré au navigateur
 ```
 
-### Exemple avec Formulaire : Ajouter un Livre
+### Exemple 2 : Ajouter un Livre (avec Formulaire)
 
 ```
 1. GET /books/add/
@@ -1466,6 +1562,291 @@ python manage.py shell
        return redirect('book_list')
    
 4. Redirection vers la liste des livres
+```
+
+### Exemple 3 : Emprunter un Livre (Processus Complet)
+
+Le système d'emprunt dans cette application fonctionne selon deux modes :
+- **Mode Utilisateur** : Les utilisateurs (étudiants, professeurs, personnel) peuvent emprunter directement
+- **Mode Bibliothécaire** : Les bibliothécaires peuvent créer des emprunts pour n'importe quel utilisateur
+
+#### A. Emprunt Direct par l'Utilisateur
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    PROCESSUS D'EMPRUNT COMPLET                   │
+└─────────────────────────────────────────────────────────────────┘
+
+1. L'utilisateur consulte un livre
+   GET /books/5/
+   ↓
+   Vue : book_detail(request, pk=5)
+   ↓
+   Template affiche :
+   - Détails du livre
+   - Bouton "Emprunter ce livre" (si disponible et user.profile.can_borrow())
+
+2. L'utilisateur clique sur "Emprunter ce livre"
+   GET /books/5/borrow/
+   ↓
+   Vue : borrow_book(request, pk=5)
+   ↓
+   Vérifications :
+   ✓ Utilisateur authentifié (@login_required)
+   ✓ Utilisateur peut emprunter (@user_passes_test(can_borrow))
+   ✓ Livre disponible (book.is_available())
+   ✓ Pas d'emprunt actif de ce livre par cet utilisateur
+   ↓
+   Template : borrow_confirm.html
+   - Affiche les détails du livre
+   - Conditions d'emprunt (durée : 14 jours)
+   - Boutons "Confirmer" / "Annuler"
+
+3. L'utilisateur confirme l'emprunt
+   POST /books/5/borrow/
+   ↓
+   Vue : borrow_book(request, pk=5)
+   ↓
+   Création de l'emprunt :
+   a) Loan.objects.create(
+        book=book,
+        borrower=request.user,
+        borrow_date=now,
+        due_date=now + 14 jours,
+        status='ACTIVE'
+      )
+   
+   b) book.borrow_book()  # Décrémente available_quantity
+      ↓
+      available_quantity -= 1
+      if available_quantity == 0:
+          status = 'BORROWED'
+      book.save()
+   
+   c) messages.success("Emprunt confirmé")
+   
+   d) redirect('my_loans')
+
+4. Redirection vers "Mes Emprunts"
+   GET /my-loans/
+   ↓
+   Vue : my_loans(request)
+   ↓
+   Affiche :
+   - Emprunts actifs/en retard
+   - Historique des emprunts
+```
+
+#### B. Création d'Emprunt par le Bibliothécaire
+
+```
+1. Le bibliothécaire accède au formulaire
+   GET /loans/create/
+   ↓
+   Vue : create_loan(request)
+   Permissions : @user_passes_test(is_librarian)
+   ↓
+   LoanForm affiche :
+   - Liste déroulante des livres disponibles
+   - Liste déroulante des utilisateurs autorisés à emprunter
+   - Date de retour prévue (pré-remplie : +14 jours)
+   - Notes (optionnel)
+
+2. Le bibliothécaire sélectionne le livre et l'emprunteur
+   POST /loans/create/
+   ↓
+   form.is_valid()
+   ↓
+   loan = form.save(commit=False)
+   loan.librarian = request.user  # Traçabilité
+   
+   if loan.book.is_available():
+       loan.save()
+       loan.book.borrow_book()
+       redirect('loan_list')
+   else:
+       messages.error("Livre non disponible")
+```
+
+#### C. Retour d'un Livre
+
+```
+1. Le bibliothécaire consulte la liste des emprunts
+   GET /loans/
+   ↓
+   Vue : loan_list(request)
+   Affiche tous les emprunts (filtrés par statut si nécessaire)
+
+2. Le bibliothécaire clique sur "Retourner"
+   GET /loans/12/return/
+   ↓
+   Vue : return_book(request, loan_id=12)
+   Permissions : @user_passes_test(is_librarian)
+   ↓
+   Template : loan_return_confirm.html
+   - Détails de l'emprunt
+   - Calcul des jours de retard (si applicable)
+   - Confirmation
+
+3. Confirmation du retour
+   POST /loans/12/return/
+   ↓
+   loan.return_book()
+   ↓
+   a) loan.return_date = now
+      loan.status = 'RETURNED'
+      loan.save()
+   
+   b) loan.book.return_book()
+      ↓
+      book.available_quantity += 1
+      if available_quantity > 0:
+          book.status = 'AVAILABLE'
+      book.save()
+   
+   c) messages.success("Livre retourné")
+   d) redirect('loan_list')
+```
+
+#### D. Diagramme de Base de Données (Relations)
+
+```
+┌─────────────┐       ┌──────────────┐       ┌─────────────┐
+│    User     │       │     Loan     │       │    Book     │
+├─────────────┤       ├──────────────┤       ├─────────────┤
+│ id (PK)     │───┐   │ id (PK)      │   ┌───│ id (PK)     │
+│ username    │   │   │ book_id (FK) │───┘   │ title       │
+│ email       │   │   │ borrower_id  │       │ author      │
+│ ...         │   │   │ librarian_id │       │ isbn        │
+└─────────────┘   │   │ borrow_date  │       │ quantity    │
+                  │   │ due_date     │       │ available_* │
+┌─────────────┐   │   │ return_date  │       │ status      │
+│ UserProfile │   │   │ status       │       └─────────────┘
+├─────────────┤   │   │ notes        │
+│ id (PK)     │   │   └──────────────┘
+│ user_id(FK) │───┤
+│ user_type   │   └───── ForeignKey relations
+│ matricule   │
+│ phone       │
+└─────────────┘
+
+Relations:
+- User ──< Loan (Un utilisateur peut avoir plusieurs emprunts)
+- Book ──< Loan (Un livre peut être emprunté plusieurs fois)
+- User ─── UserProfile (One-to-One : Un utilisateur a un profil)
+```
+
+#### E. Vérifications et Validations
+
+**Avant de créer un emprunt :**
+```python
+# 1. Vérifier que le livre est disponible
+if not book.is_available():
+    # is_available() vérifie :
+    # - available_quantity > 0
+    # - status == 'AVAILABLE'
+    return error
+
+# 2. Vérifier que l'utilisateur peut emprunter
+if not user.profile.can_borrow():
+    # can_borrow() vérifie :
+    # - user_type in ['STUDENT', 'TEACHER', 'STAFF']
+    return error
+
+# 3. Éviter les doublons (même livre déjà emprunté)
+existing_loan = Loan.objects.filter(
+    book=book,
+    borrower=user,
+    status__in=['ACTIVE', 'OVERDUE']
+).exists()
+
+if existing_loan:
+    return warning("Vous avez déjà emprunté ce livre")
+```
+
+**Détection automatique des retards :**
+```python
+# Dans le modèle Loan.save()
+if self.status == 'ACTIVE' and timezone.now() > self.due_date:
+    self.status = 'OVERDUE'
+```
+
+#### F. Commandes pour Tester le Système d'Emprunt
+
+```bash
+# 1. Créer un utilisateur étudiant
+python manage.py shell
+```
+
+```python
+from django.contrib.auth.models import User
+from website.models import UserProfile, Book, Loan
+from django.utils import timezone
+from datetime import timedelta
+
+# Créer un utilisateur
+user = User.objects.create_user(
+    username='etudiant1',
+    email='etudiant@example.com',
+    password='password123',
+    first_name='Jean',
+    last_name='Dupont'
+)
+
+# Créer son profil
+profile = UserProfile.objects.create(
+    user=user,
+    user_type='STUDENT',
+    matricule='ETU2025001'
+)
+
+# Créer un livre
+book = Book.objects.create(
+    title='Django pour les débutants',
+    author='John Doe',
+    isbn='9781234567890',
+    quantity=3,
+    available_quantity=3,
+    status='AVAILABLE'
+)
+
+# Créer un emprunt manuellement
+loan = Loan.objects.create(
+    book=book,
+    borrower=user,
+    borrow_date=timezone.now(),
+    due_date=timezone.now() + timedelta(days=14),
+    status='ACTIVE'
+)
+
+# Mettre à jour le livre
+book.borrow_book()
+
+# Vérifier
+print(f"Emprunts actifs de {user.username}: {user.loans.filter(status='ACTIVE').count()}")
+print(f"Exemplaires disponibles: {book.available_quantity}/{book.quantity}")
+```
+
+#### G. Permissions et Sécurité
+
+**Matrice de Permissions :**
+
+| Action | Anonyme | Étudiant | Professeur | Personnel | Bibliothécaire |
+|--------|---------|----------|------------|-----------|----------------|
+| Voir les livres | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Voir détails | ✅ | ✅ | ✅ | ✅ | ✅ |
+| Emprunter | ❌ | ✅ | ✅ | ✅ | ❌ (crée pour autres) |
+| Voir ses emprunts | ❌ | ✅ | ✅ | ✅ | ✅ (tous) |
+| Créer emprunt (pour autres) | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Retourner un livre | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Ajouter/Modifier/Supprimer livre | ❌ | ❌ | ❌ | ❌ | ✅ |
+| Dashboard | ❌ | ❌ | ❌ | ❌ | ✅ |
+
+**Décorateurs utilisés :**
+```python
+@login_required  # Nécessite authentification
+@user_passes_test(is_librarian)  # Réservé aux bibliothécaires
+@user_passes_test(can_borrow)  # Réservé aux emprunteurs
 ```
 
 ---
@@ -1749,4 +2130,5 @@ Ce guide couvre les bases de Django et les concepts essentiels pour développer 
 5. Améliorer l'interface utilisateur avec Bootstrap ou Tailwind CSS
 
 Bon développement ! 🚀
+
 
